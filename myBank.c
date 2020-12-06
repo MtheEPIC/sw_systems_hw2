@@ -4,13 +4,19 @@
 #include <stdlib.h>
 
 #define MAX_SIZE 50
+#define PREFIX 901
 
 int virtualSize = 0;
-float accounts[MAX_SIZE] = {0};
-int available[MAX_SIZE] = {0}; // 0 = true -1 = false
+float accounts[MAX_SIZE];
+bool used[MAX_SIZE];
 
-bool open(float balance)
+bool open(float amount)
 {
+	if (amount < 0)
+	{
+		printf("Invalid amount type\n");
+		return false;
+	}
 	if (isFull())
 		return false;
 	int cell = emptyCell();
@@ -21,11 +27,12 @@ bool open(float balance)
 	}
 	else
 		addAccount(cell, false);
-	accounts[cell] += balance;
+	accounts[cell] += amount;
 	return true;
 }
 bool get(int id) 
 {
+	resizeID(&id);
 	if (!isValid(id))
 	{
 		printError();
@@ -36,17 +43,19 @@ bool get(int id)
 }
 bool add(int id, float amount) //reuse code
 {
+	resizeID(&id);
 	if (!isValid(id))
 	{
 		printError();
 		return false;
-	} //change to sub?
+	}
 	accounts[id] += amount;
 	printBalance(id);
 	return true;
 }
 bool sub(int id, float amount)
 {
+	resizeID(&id);
 	if (!isValid(id))
 	{
 		printError();
@@ -60,23 +69,24 @@ bool sub(int id, float amount)
 }
 bool close(int id)
 {
+	resizeID(&id);
 	if (!isValid(id))
 	{
-		printError();
+		printf("This account is already closed\n");
 		return false;
 	}
-	accounts[id] = -1;
-	available[id] = 0;
+	printf("Closed account number %d\n", id+PREFIX);
+	used[id] = false;
+	accounts[id] = 0;
 	return true;
 }
 void interest(float rate) //assume rate is valid, (0:)
 {
 	if (rate <= 0)
 		return;
-	rate++;
 	for (int i=0; i<virtualSize; ++i)
 	{
-		if (accounts[i] == -1)
+		if (!isValid(i))
 			continue;
 		accounts[i] = accounts[i] * (1+rate/100);
 	}
@@ -85,7 +95,7 @@ void print(void)
 {
 	for (int i=0; i<virtualSize; ++i)
 	{
-		if (accounts[i] == -1)
+		if (!isValid(i))
 			continue;
 		printBalance(i);
 	}
@@ -94,33 +104,39 @@ void quit(void)
 {
 	for (int i=0; i<virtualSize; ++i)
 	{
-		if (available[i] == 0)
+		if (!used[i])
 			continue;
-		available[i] = 0;
-		accounts[i] = -1;
+		used[i] = false;
+		// accounts[i] = -1;
 	}
-	// printf("Exit");
-	// exit(EXIT_FAILURE);
 }
 
 bool isValid(int id)
 {
 	if (id < 0 || id >= virtualSize)
 		return false;
-	if (available[id] == 0)
-		return false;
-	return true;
+	// if (!used[id])
+	// 	return false;
+	// return true;
+	return used[id];
 }
 bool isFull(void)
 {
-	if (virtualSize >= MAX_SIZE) 
+	if (virtualSize > MAX_SIZE) 
 		return true;
-	return false;
+	if (virtualSize < MAX_SIZE)
+		return false;
+	for (int i=0; i<virtualSize; ++i)
+	{
+		if (!used[i])
+			return false;
+	}
+	return true;
 }
 void addAccount(int id, bool resize)
 {
-	printf("New account number is: %d\n", id);
-	available[id] = -1;
+	printf("New account number is: %d\n", id+PREFIX);
+	used[id] = true;
 	if (resize)
 		virtualSize++;
 }
@@ -128,14 +144,14 @@ int emptyCell(void)
 {
 	for (int i=0; i<virtualSize; ++i)
 	{
-		if (available[i] == 0)
+		if (!used[i])
 			return i;
 	}
 	return -1;
 }
 void printBalance(int id)
 { 
-	printf("The balance of account number %d is: %.2f\n", id, accounts[id]);
+	printf("The balance of account number %d is: %.2f\n", id+PREFIX, accounts[id]);
 }
 void printError(void)
 { 
@@ -152,4 +168,8 @@ void welcome(void)
 			 "I-Interest\n"
 			 "P-Print\n"
 			 "E-Exit\n");
+}
+void resizeID(int* id)
+{
+	*id = *id - PREFIX;
 }

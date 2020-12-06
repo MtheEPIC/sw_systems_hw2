@@ -18,3 +18,4 @@ void addAccount(int id, bool resize); //register a new account
 void printBalance(int id);
 void printError(void);
 void welcome(void);
+void resizeID(int* id);
